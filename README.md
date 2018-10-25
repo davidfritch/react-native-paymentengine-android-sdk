@@ -40,7 +40,7 @@ NOTE: the first time trying to run it on ios, I believe I saw something like `:C
 After the project is initialized add this project by running at the root
 
 ```
-npm install --save git+https://github.com/davidfritch/react-native-android-toast.git
+npm install --save git+https://github.com/davidfritch/react-native-paymentengine-android-sdk.git
 ```
 
 Then see the "Installing it as a library in your main project" section in https://cmichel.io/how-to-create-react-native-android-library where he says which files need to be updated.
@@ -54,8 +54,8 @@ Note: A gotcha here is that it will fail to find a file and in the project `buil
 modify `settings.gradle` like so:
 
 ```
-include ':react-native-android-paymentengine-android-sdk'
-project(':react-native-android-paymentengine-android-sdk').projectDir = new File(settingsDir, '../node_modules/react-native-paymentengine-android-sdk/android')
+include ':react-native-paymentengine-android-sdk'
+project(':react-native-paymentengine-android-sdk').projectDir = new File(settingsDir, '../node_modules/react-native-paymentengine-android-sdk/android')
 ```
 
 Modify `/app/build.gradle` with the following:
@@ -64,13 +64,13 @@ Modify `/app/build.gradle` with the following:
 dependencies {
     // ...
     implementation "com.facebook.react:react-native:0.57.1"  // From node_modules
-    api project(':react-native-android-paymentengine-android-sdk')
+    api project(':react-native-paymentengine-android-sdk')
 }
 ```
 
 Note: the site references `compile` but this has been updated to use `api` with the updated gradle build tools
 
-Once you have done that, and resync the project, you should see both the main android project project and the `react-native-android-toast` project/component.
+Once you have done that, and resync the project, you should see both the main android project project and the `react-native-paymentengine-android-sdk` project/component.
 
 A Note on Android Studio and Gradle: When I initially just used the code as it was in the other Tutorial, the build tools and the target SDK in the main React Native project were not in sync with target SDK found in the react-native-android-toast `build.gradle` file.  So it is possible that when you run `react-native init ...` It may be targeting a more recent version of the SDK.  At this time, I am not sure the best way because then Android Studio was encouraging to update the `build.gradle` file as found under `node_modules` but if you ever update the package using `npm` that obviously can become a problem.  At this time, I am not sure the best way to deal with that.  Thus, this package is built to be compatible if you initialize a react-native at 0.57.1 and I am assuming that would target android sdk 27.
 
@@ -101,14 +101,12 @@ The `getName()` in `Module.java` allows it to be referenced in `index.android.js
 
 import { NativeModules } from 'react-native'
 // name as defined via ReactContextBaseJavaModule's getName
-module.exports = NativeModules.ToastA
+module.exports = NativeModules.PaymentEngineAndroidSdkPackage
 ```
 
 NOTE: there is an `index.ios.js` in this project so that when it runs iOS it at least loads this required file but obviously doesn't do anything.  But if this is not present, you will see an error in the Metro Bundler console logs saying it couldn't find an index.js file.
 
-Another Note: When I had the getName() returning `"ToastAndroid"` I believe I was running into a conflict because there is already a module named `ToastAndroid` in one of the facebook .jar libraries, so it was renamed to `"ToastA"` just for this example.
-
-Add a `ToastAndroidExample.js` file to your React Native project as follows:
+Add a `PaymentEngineExample.js` file to your React Native project as follows:
 
 ```
 /**
@@ -120,8 +118,8 @@ Add a `ToastAndroidExample.js` file to your React Native project as follows:
  */
 
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View, Button, Alert} from 'react-native';
-import ToastA from 'react-native-android-toast'
+import {Platform, StyleSheet, Text, View, Button, Alert, DeviceEventEmitter} from 'react-native';
+import PaymentEngineAndroidSdk from 'react-native-paymentengine-android-sdk'
 
 const instructions = Platform.select({
   ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
@@ -130,13 +128,67 @@ const instructions = Platform.select({
     'Shake or press menu button for dev menu',
 });
 
-export default class ToastAndroidExample extends Component {
+export default class PaymentEngineExample extends Component {
+
+  constructor(props) {
+    super(props)
+    this.state = {
+      log: '',
+
+      mConnType: 'BT',
+
+      /*
+        Currently our test merchang account credentials
+      */
+      sourceKey: '',
+      pin: '',
+      host: 'sandbox.usaepay.com',
+      /*
+        See properties on UEMConstants.java in their SDK
+      */
+      transactionInfo: {
+        amount: '1.00',
+        tip: '0.00',
+        invoice: '1234',
+        description: '',
+        command: 'cc:sale',
+        conn_type: 'BT',
+        sale_type: 'cc:sale',
+        tax: '0.00'
+      }
+    }
+  }
+
+  log(message) {
+    let log = this.state.log || ''
+    log += message + '\n'
+    this.setState({log})
+  }
+
+  componentWillMount() {
+    
+    /*
+      Will get notification events from the Android component
+    */
+    DeviceEventEmitter.addListener('onLog', (e) => {
+      this.log(e.message)
+    })
+  }
+
   _onPress = Platform.select({
       ios: () => {
           Alert.alert('Alert', 'You pressed me on ios!')
       },
-      android: () => {
-        ToastA.show('Android Toast Ran Again!', ToastA.LONG)
+      android: async () => {
+        const {mConnType, sourceKey, pin, host, transactionInfo} = this.state
+        try {
+          await PaymentEngineAndroidSdk.startTransaction(mConnType, sourceKey, pin, host, transactionInfo)
+          this.log('Promise resolved.')
+        }
+        catch(error) {
+          this.log('An error occurred during the transaction: ' + error.message || error)
+        }
+        
       }
   })
 
@@ -147,6 +199,7 @@ export default class ToastAndroidExample extends Component {
         <Text style={styles.instructions}>To get started, edit App.js</Text>
         <Text style={styles.instructions}>{instructions}</Text>
         <Button onPress={this._onPress} title="Press me"></Button>
+        <Text style={styles.logs}>{this.state.log || ''}</Text>
       </View>
     );
   }
@@ -169,6 +222,11 @@ const styles = StyleSheet.create({
     color: '#333333',
     marginBottom: 5,
   },
+  logs: {
+    textAlign: 'left',
+    color: '#333333',
+    marginBottom: 5,
+  },
 });
 ```
 
@@ -178,10 +236,10 @@ And then update the `index.js` file to run that component
 /** @format */
 
 import {AppRegistry} from 'react-native';
-import ToastAndroidExample from './ToastAndroidExample';
+import PaymentEngineExample from './PaymentEngineExample';
 import {name as appName} from './app.json';
 
-AppRegistry.registerComponent(appName, () => ToastAndroidExample);
+AppRegistry.registerComponent(appName, () => PaymentEngineExample);
 ```
 
 Then from the root of the project finally run

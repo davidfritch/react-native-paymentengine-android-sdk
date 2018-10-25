@@ -38,6 +38,12 @@ android {
     compileSdkVersion 27
     buildToolsVersion "28.0.3"
 
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
+
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 27
@@ -63,5 +69,7 @@ repositories {
 }
 
 dependencies {
+    api fileTree(dir: 'libs', include: ['*.jar'])
+    api(name:'paymentengine-sdk-2.3.3', ext:'aar')
     api "com.facebook.react:react-native:${computeReactVersion()}"
 }

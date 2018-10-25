@@ -54,8 +54,8 @@ Note: A gotcha here is that it will fail to find a file and in the project `buil
 modify `settings.gradle` like so:
 
 ```
-include ':react-native-android-toast'
-project(':react-native-android-toast').projectDir = new File(settingsDir, '../node_modules/react-native-android-toast/android')
+include ':react-native-android-paymentengine-android-sdk'
+project(':react-native-android-paymentengine-android-sdk').projectDir = new File(settingsDir, '../node_modules/react-native-paymentengine-android-sdk/android')
 ```
 
 Modify `/app/build.gradle` with the following:
@@ -64,7 +64,7 @@ Modify `/app/build.gradle` with the following:
 dependencies {
     // ...
     implementation "com.facebook.react:react-native:0.57.1"  // From node_modules
-    api project(':react-native-android-toast')
+    api project(':react-native-android-paymentengine-android-sdk')
 }
 ```
 

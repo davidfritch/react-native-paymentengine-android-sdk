@@ -1,9 +1,7 @@
 package com.upstreamengineering;
 
-import android.support.annotation.Nullable;
 import android.widget.Toast;
 
-import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -46,6 +44,7 @@ public class PaymentEngineAndroidSdkModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void show(String message, int duration) {
+    emitLog("show(): " + message);
     Toast.makeText(getReactApplicationContext(), message, duration).show();
   }
 
@@ -59,117 +58,131 @@ public class PaymentEngineAndroidSdkModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void startTransaction(
-//      final String mConnType,
-//      final String mLog,
-//      final String sourceKey,
-//      final String pin,
-//      final String host,
-//      final ReadableMap transInfo,
-//      final Promise promise
-
-          // Just for initial test
-        final String foo,
-        final Promise promise
+          final String mConnType,
+          final String sourceKey,
+          final String pin,
+          final String host,
+          final ReadableMap transInfo,
+          final Promise promise
   ) {
     try {
-//      emitLog("Starting Transaction...");
-      emitLog("Starting Transaction...: " + foo);
+      emitLog("Starting Transaction...");
 
-//      final HashMap<String, String> hashTransInfo = new HashMap<>();
-//      final HashMap<String, Object> hashStringObjTransInfo = transInfo.toHashMap();
-//      for (String key : hashStringObjTransInfo.keySet()) {
-//        final Object obj = hashStringObjTransInfo.get(key);
-//        hashStringObjTransInfo.put(key, obj.toString());
-//      }
+      final HashMap<String, String> hashTransInfo = new HashMap<>();
+      final HashMap<String, Object> hashStringObjTransInfo = transInfo.toHashMap();
+      for (String key : hashStringObjTransInfo.keySet()) {
+        final Object obj = hashStringObjTransInfo.get(key);
+        hashTransInfo.put(key, obj.toString());
+      }
 
-      emitLog("Initializing TransactionHelper...");
+      emitLog("Initializing TransactionHelper... " + hashTransInfo);
 
-//    final TransactionHelper transactionHelper = new TransactionHelper(
-//            getCurrentActivity(),
-//            mConnType,
-//            mLog,
-//            sourceKey,
-//            pin,
-//            host,
-//            hashTransInfo,
-//            new OnLog() {
-//              @Override
-//              public void onLog(String s) {
-//                emitLog("Log - " + s);
-//              }
-//
-//              @Override
-//              public void onLogTrace(String s) {
-//                emitLog("Trace - " + s);
-//              }
-//            }
-//    );
-//
-//    UEMiddlewareInterface ueMiddlewareInterface = new UEMiddlewareInterface() {
-//      @Override
-//      public void onConnected() {
-//
-//      }
-//
-//      @Override
-//      public void onDisconnected() {
-//      }
-//
-//      @Override
-//      public void onTransactionComplete(UEMTransactionResult uemTransactionResult) {
-//        transactionHelper.disconnect();
-//      }
-//
-//      @Override
-//      public void onDeviceInfoReceived(HashMap<String, String> hashMap) {
-//      }
-//
-//      @Override
-//      public void onError(UE_ERROR ue_error) {
-//      }
-//
-//      @Override
-//      public void onStatusChanged(String s) {
-//      }
-//
-//      @Override
-//      public void onSeePhoneNFC(HashMap<String, String> hashMap) {
-//      }
-//
-//      @Override
-//      public void onPromptForPartialAuth(String s, HashMap<String, String> hashMap) {
-//        transactionHelper.returnPartialAuthDecision();
-//      }
-//
-//      @Override
-//      public void onProgressBarUpdateAvailable(String s, String s1, float v) {
-//      }
-//
-//      @Override
-//      public void onReceiptReceived(String s) {
-//      }
-//
-//      @Override
-//      public void onMerchantCapabilitiesReceived(JSONObject jsonObject) {
-//      }
-//
-//      @Override
-//      public void onGatewayInfoReceived(JSONObject jsonObject) {
-//      }
-//    };
-//    transactionHelper.setUeMiddlewareInterface(ueMiddlewareInterface);
-//
-//    try {
-//      transactionHelper.connect();
-//      transactionHelper.startTransaction();
-//    } catch (Exception e) {
-//      Toast.makeText(getReactApplicationContext(), "An error occurred processing the transaction", Toast.LENGTH_LONG).show();
-//    }
+      final TransactionHelper transactionHelper = new TransactionHelper(
+              getCurrentActivity(),
+              mConnType,
+              sourceKey,
+              pin,
+              host,
+              hashTransInfo,
+              new OnLog() {
+                @Override
+                public void onLog(String s) {
+                  emitLog("Log - " + s);
+                }
 
-      emitLog("Transaction Completed!");
-      promise.resolve("Finished!");
-    } catch (Exception e) {
-      emitLog("Error: " + e.getLocalizedMessage());
+                @Override
+                public void onLogTrace(String s) {
+                  emitLog("Trace - " + s);
+                }
+              }
+      );
+
+
+      UEMiddlewareInterface ueMiddlewareInterface = new UEMiddlewareInterface() {
+        boolean resolvedPromise = false;
+
+        @Override
+        public void onConnected() {
+          emitLog("onConnected()");
+          transactionHelper.startTransaction();
+        }
+
+        @Override
+        public void onDisconnected() {
+          emitLog("onDisconnected()");
+          if (!resolvedPromise) {
+            resolvedPromise = true;
+            promise.resolve("Complete!");
+          }
+
+        }
+
+        @Override
+        public void onTransactionComplete(UEMTransactionResult uemTransactionResult) {
+          emitLog("onTransactionComplete()");
+          try {
+            transactionHelper.disconnect();
+          } catch (Throwable e) {
+            if (!resolvedPromise) {
+              resolvedPromise = true;
+              promise.reject(e);
+            }
+          }
+        }
+
+        @Override
+        public void onDeviceInfoReceived(HashMap<String, String> hashMap) {
+          emitLog("onDeviceInfoReceived(): " + hashMap);
+        }
+
+        @Override
+        public void onError(UE_ERROR ue_error) {
+          emitLog("onError(): " + ue_error.text);
+          if (!resolvedPromise) {
+            resolvedPromise = true;
+            promise.reject(ue_error.toString(), ue_error.text);
+          }
+        }
+
+        @Override
+        public void onStatusChanged(String s) {
+          emitLog("Status Changed - " + s);
+        }
+
+        @Override
+        public void onSeePhoneNFC(HashMap<String, String> hashMap) {
+          emitLog("onSeePhoneNFC(): " + hashMap);
+        }
+
+        @Override
+        public void onPromptForPartialAuth(String s, HashMap<String, String> hashMap) {
+          emitLog("onPromptForPartialAuth(): " + s + " " + hashMap);
+          transactionHelper.returnPartialAuthDecision();
+        }
+
+        @Override
+        public void onProgressBarUpdateAvailable(String s, String s1, float v) {
+        }
+
+        @Override
+        public void onReceiptReceived(String s) {
+          emitLog("onReceiptReceived(): " + s);
+        }
+
+        @Override
+        public void onMerchantCapabilitiesReceived(JSONObject jsonObject) {
+          emitLog("onMerchantCapabilitiesReceived()");
+        }
+
+        @Override
+        public void onGatewayInfoReceived(JSONObject jsonObject) {
+          emitLog("onGatewayInfoReceived()");
+        }
+      };
+
+      transactionHelper.setUeMiddlewareInterface(ueMiddlewareInterface);
+      transactionHelper.connect();
+    } catch (Throwable e) {
       promise.reject(e);
     }
   }

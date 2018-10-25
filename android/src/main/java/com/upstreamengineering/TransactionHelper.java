@@ -25,7 +25,6 @@ class TransactionHelper {
      *  Fields to initialize UsaEpay Helper
      */
     private String mConnType;
-    private String mLog;
     private String sourceKey;
     private String pin;
     private String host;
@@ -39,7 +38,6 @@ class TransactionHelper {
     TransactionHelper(
             Activity parent,
             String mConnType,
-            String mLog,
             String sourceKey,
             String pin,
             String host,
@@ -52,10 +50,6 @@ class TransactionHelper {
 
         if (mConnType == null) {
             throw new IllegalArgumentException("mConnType is null");
-        }
-
-        if (mLog == null) {
-            throw new IllegalArgumentException("mLog is null");
         }
 
         if (sourceKey == null) {

@@ -77,15 +77,15 @@ A Note on Android Studio and Gradle: When I initially just used the code as it w
 Then in `MainApplication.java` in the main project you can add the following:
 
 ```
-import com.upstreamengineering.Package;  // add this for react-native-android-toast
+import com.upstreamengineering.PaymentEngineAndroidSdkPackage;
 ```
 
 ```
 @Override
     protected List<ReactPackage> getPackages() {
       return Arrays.asList(
-          new MainReactPackage()
-          ,new Package() // The new object
+          new MainReactPackage(),
+          new PaymentEngineAndroidSdkPackage()
       );
     }
 ```
